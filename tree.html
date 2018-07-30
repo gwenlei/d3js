@@ -1,0 +1,259 @@
+<html> 
+  <head> 
+        <meta charset="utf-8"> 
+        <title>tree</title> 
+        <style>
+
+				.node circle {
+				  fill: #fff;
+				  stroke: steelblue;
+				  stroke-width: 1.5px;
+				}
+				
+				.node {
+				  font: 12px sans-serif;
+				}
+				
+				.link {
+				  fill: none;
+				  stroke-width: 1.5px;
+				}
+
+				
+				</style>
+  </head> 
+
+    <body> 
+
+        <script src="/test/d3.v3.min.js" charset="utf-8"></script> 
+        <script>  
+        	
+class Node {  
+  constructor(data, left, right) {
+    this.data = data;
+    this.left = left;
+    this.right = right;
+  }
+}
+
+class BinarySearchTree {
+
+  constructor() {
+    this.root = null;
+  }
+
+  insert(data) {
+    let n = new Node(data, null, null);
+    if (!this.root) {
+      return this.root = n;
+    }
+    let currentNode = this.root;
+    let parent = null;
+    while (1) {
+      parent = currentNode;
+      if (data < currentNode.data) {
+        currentNode = currentNode.left;
+        if (currentNode === null) {
+          parent.left = n;
+          break;
+        }
+      } else {
+        currentNode = currentNode.right;
+        if (currentNode === null) {
+          parent.right = n;
+          break;
+        }
+      }
+    }
+  }
+
+  remove(data) {
+    this.root = this.removeNode(this.root, data)
+  }
+
+  removeNode(node, data) {
+    if (node == null) {
+      return null;
+    }
+
+    if (data == node.data) {
+      // no children node
+      if (node.left == null && node.right == null) {
+        return null;
+      }
+      if (node.left == null) {
+        return node.right;
+      }
+      if (node.right == null) {
+        return node.left;
+      }
+
+      let getSmallest = function(node) {
+        if(node.left === null && node.right == null) {
+          return node;
+        }
+        if(node.left != null) {
+          return node.left;
+        }
+        if(node.right !== null) {
+          return getSmallest(node.right);
+        }
+
+      }
+      let temNode = getSmallest(node.right);
+      node.data = temNode.data;
+      node.right = this.removeNode(temNode.right,temNode.data);
+      return node;
+
+    } else if (data < node.data) {
+      node.left = this.removeNode(node.left,data);
+      return node;
+    } else {
+      node.right = this.removeNode(node.right,data);
+      return node;
+    }
+  }
+
+  find(data) {
+    var current = this.root;
+    while (current != null) {
+      if (data == current.data) {
+        break;
+      }
+      if (data < current.data) {
+        current = current.left;
+      } else {
+        current = current.right
+      }
+    }
+    return current.data;
+  }
+
+}
+
+
+class D3Node {  
+  constructor() {
+    this.name = null;
+    this.id = null;
+    this.children = [];
+  }
+}
+
+var dataarray=[];
+var id=0;
+function  transform(node) {
+  	let d3node = new D3Node();
+  	d3node.name=node.data;
+  	d3node.id=id++;
+    if (node.left != null) {
+      d3node.children.push(transform(node.left));
+    }else{
+    	d3node.children.push(new D3Node());
+    }
+    if (node.right != null){
+      d3node.children.push(transform(node.right));
+    }else{
+    	d3node.children.push(new D3Node());
+    }
+  	dataarray.push(d3node.id);
+    return d3node; 
+  }
+
+tree1= new BinarySearchTree();
+for (var i = 0;i < 20; i++) {
+	tree1.insert(Math.floor(Math.random()*10+Math.random()*30+Math.random()*50));
+}
+
+console.log(tree1);
+console.log(JSON.stringify(tree1));
+d3node=transform(tree1.root);
+console.log(d3node);
+console.log(JSON.stringify(d3node));
+console.log(dataarray);
+
+
+var width = 800,
+height = 800;
+
+var tree = d3.layout.tree()
+	.size([width-100, height-200])
+	.separation(function(a, b) { return (a.parent == b.parent ? 1 : 2); });
+
+var diagonal = d3.svg.diagonal()
+	.projection(function(d) { return [d.x, d.y]; });
+
+var svg = d3.select("body").append("svg")
+	.attr("width", width)
+	.attr("height", height)
+	.append("g")
+	.attr("transform", "translate(40,40)");
+
+
+var i=0,n=0;
+update();
+function update() {
+	var nodes = tree.nodes(d3node).reverse();
+	var links = tree.links(nodes);
+	
+	var link = svg.selectAll(".link")
+	  .data(links)
+	  .enter()
+	  .append("path")
+	  .attr("class", "link")
+	  .attr("stroke", function(d) { if
+                    (d.target.name == null) { return "white"; } else {return "#ccc";}}
+                  )	  
+ 	  .attr("d", diagonal);
+ 	  
+  var update=svg.selectAll(".node")
+	  .data(nodes)
+	  
+	  	update.select("circle")
+		.style("fill",function(d) { if
+                    (d.id == dataarray[n]) { return "steelblue"; } else  { return "white";}
+                  })
+	  .attr("r", function(d) { if
+                    (d.id == null) { return 0; } else  { return 20;}
+                  });
+                  
+	
+	update.select("text")
+	  .attr("dx", 0)
+	  .attr("dy", 3)
+	  .style("text-anchor", "middle")
+	  .text(function(d) { return d.name; });
+	
+	var node = update.enter()
+	  .append("g")
+	  .attr("class", "node")
+	  .attr("transform", function(d) { return "translate(" + d.x + "," + d.y + ")"; })
+	  .on("click", click);
+	
+	node.append("circle")
+		.style("fill",function(d) { if
+                    (d.id == dataarray[n]) { return "steelblue"; } else  { return "white";}
+                  })
+	  .attr("r", function(d) { if
+                    (d.id == null) { return 0; } else  { return 20;}
+                  });
+                  
+	
+	node.append("text")
+	  .attr("dx", 0)
+	  .attr("dy", 3)
+	  .style("text-anchor", "middle")
+	  .text(function(d) { return d.name; });
+	  
+
+}	
+	function click(d) {
+	if(n>=dataarray.length-1){n=0;}else{n++;}  
+  console.log(n);
+  console.log(dataarray[n]);
+  update();
+}
+        </script> 
+   
+    </body> 
+</html>
